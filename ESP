@@ -1,6 +1,7 @@
--- Applies a see-through reddish-orange glow to all players and displays their name and distance
-local function applyHighlight(player)
-    if player.Character then
+-- Applies a see-through reddish-orange glow to all players and displays their name and distance, with a team check
+local fun
+ction applyHighlight(player)
+    if player.Character and player.Team ~= game.Players.LocalPlayer.Team then -- Team check
         -- Apply highlight effect
         local highlight = Instance.new("Highlight")
         highlight.Parent = player.Character
@@ -42,13 +43,12 @@ local function applyHighlight(player)
 end
 
 -- Apply highlight to all existing players
-for _, player in pairs(game.Players:GetPlayers()) do
-    applyHighlight(player)
-end
-
--- Apply highlight to new players when they join
 game.Players.PlayerAdded:Connect(function(player)
     player.CharacterAdded:Connect(function()
         applyHighlight(player)
     end)
 end)
+
+for _, player in pairs(game.Players:GetPlayers()) do
+    applyHighlight(player)
+end
