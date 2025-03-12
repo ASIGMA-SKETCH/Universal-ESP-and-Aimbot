@@ -1,54 +1,44 @@
--- Applies a see-through reddish-orange glow to all players and displays their name and distance, with a team check
-local fun
-ction applyHighlight(player)
-    if player.Character and player.Team ~= game.Players.LocalPlayer.Team then -- Team check
-        -- Apply highlight effect
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+
+-- Function to check if two players are on the same team
+local function IsTeammate(targetPlayer)
+    if LocalPlayer.Team and targetPlayer.Team then
+        return LocalPlayer.Team == targetPlayer.Team
+    end
+    return false
+end
+
+-- Function to add ESP to a player
+local function AddESP(player)
+    -- Don't highlight yourself or teammates
+    if player == LocalPlayer or IsTeammate(player) then return end
+
+    -- Wait for character to load
+    player.CharacterAdded:Connect(function(character)
+        local highlight = Instance.new("Highlight")
+        highlight.Parent = character
+        highlight.FillColor = Color3.fromRGB(255, 100, 0) -- Reddish-orange
+        highlight.FillTransparency = 0.5 -- Semi-transparent
+        highlight.OutlineColor = Color3.fromRGB(255, 50, 0) -- Darker outline
+        highlight.OutlineTransparency = 0.2
+    end)
+
+    -- If they already have a character, apply ESP immediately
+    if player.Character then
         local highlight = Instance.new("Highlight")
         highlight.Parent = player.Character
-        highlight.FillColor = Color3.fromRGB(255, 100, 0) -- Reddish-orange color
-        highlight.FillTransparency = 0.5 -- Semi-transparent
-        highlight.OutlineColor = Color3.fromRGB(255, 50, 0) -- Slightly darker red
+        highlight.FillColor = Color3.fromRGB(255, 100, 0)
+        highlight.FillTransparency = 0.5
+        highlight.OutlineColor = Color3.fromRGB(255, 50, 0)
         highlight.OutlineTransparency = 0.2
-        
-        -- Create BillboardGui for name and distance
-        local billboard = Instance.new("BillboardGui")
-        billboard.Parent = player.Character
-        billboard.Adornee = player.Character:FindFirstChild("Head")
-        billboard.Size = UDim2.new(4, 0, 1, 0)
-        billboard.StudsOffset = Vector3.new(0, 2, 0)
-        billboard.AlwaysOnTop = true
-        
-        local textLabel = Instance.new("TextLabel")
-        textLabel.Parent = billboard
-        textLabel.Size = UDim2.new(1, 0, 1, 0)
-        textLabel.BackgroundTransparency = 1
-        textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-        textLabel.TextStrokeTransparency = 0.5
-        textLabel.TextScaled = true
-        textLabel.Font = Enum.Font.SourceSansBold
-        
-        -- Update text to show name and distance
-        local function updateLabel()
-            if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                local localPlayer = game.Players.LocalPlayer
-                if localPlayer and localPlayer.Character and localPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                    local distance = (localPlayer.Character.HumanoidRootPart.Position - player.Character.HumanoidRootPart.Position).magnitude
-                    textLabel.Text = player.Name .. " (" .. math.floor(distance) .. "m)"
-                end
-            end
-        end
-        
-        game:GetService("RunService").RenderStepped:Connect(updateLabel)
     end
 end
 
--- Apply highlight to all existing players
-game.Players.PlayerAdded:Connect(function(player)
-    player.CharacterAdded:Connect(function()
-        applyHighlight(player)
-    end)
-end)
-
-for _, player in pairs(game.Players:GetPlayers()) do
-    applyHighlight(player)
+-- Apply ESP to all current and future players
+for _, player in pairs(Players:GetPlayers()) do
+    AddESP(player)
 end
+
+Players.PlayerAdded:Connect(AddESP)
