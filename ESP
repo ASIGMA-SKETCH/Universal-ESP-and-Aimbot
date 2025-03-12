@@ -1,57 +1,54 @@
-local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local Camera = workspace.CurrentCamera
-local AimLockEnabled = false
-local Target = nil
-
--- Function to get the nearest player
-local function getNearestPlayer()
-    local closestPlayer = nil
-    local shortestDistance = math.huge
-    
-    for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            local distance = (LocalPlayer.Character.HumanoidRootPart.Position - player.Character.HumanoidRootPart.Position).Magnitude
-            if distance < shortestDistance then
-                shortestDistance = distance
-                closestPlayer = player
+-- Applies a see-through reddish-orange glow to all players and displays their name and distance
+local function applyHighlight(player)
+    if player.Character then
+        -- Apply highlight effect
+        local highlight = Instance.new("Highlight")
+        highlight.Parent = player.Character
+        highlight.FillColor = Color3.fromRGB(255, 100, 0) -- Reddish-orange color
+        highlight.FillTransparency = 0.5 -- Semi-transparent
+        highlight.OutlineColor = Color3.fromRGB(255, 50, 0) -- Slightly darker red
+        highlight.OutlineTransparency = 0.2
+        
+        -- Create BillboardGui for name and distance
+        local billboard = Instance.new("BillboardGui")
+        billboard.Parent = player.Character
+        billboard.Adornee = player.Character:FindFirstChild("Head")
+        billboard.Size = UDim2.new(4, 0, 1, 0)
+        billboard.StudsOffset = Vector3.new(0, 2, 0)
+        billboard.AlwaysOnTop = true
+        
+        local textLabel = Instance.new("TextLabel")
+        textLabel.Parent = billboard
+        textLabel.Size = UDim2.new(1, 0, 1, 0)
+        textLabel.BackgroundTransparency = 1
+        textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        textLabel.TextStrokeTransparency = 0.5
+        textLabel.TextScaled = true
+        textLabel.Font = Enum.Font.SourceSansBold
+        
+        -- Update text to show name and distance
+        local function updateLabel()
+            if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                local localPlayer = game.Players.LocalPlayer
+                if localPlayer and localPlayer.Character and localPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                    local distance = (localPlayer.Character.HumanoidRootPart.Position - player.Character.HumanoidRootPart.Position).magnitude
+                    textLabel.Text = player.Name .. " (" .. math.floor(distance) .. "m)"
+                end
             end
         end
-    end
-    return closestPlayer
-end
-
--- Function to lock aim onto target
-local function aimLock()
-    if Target and Target.Character and Target.Character:FindFirstChild("HumanoidRootPart") then
-        local targetPosition = Target.Character.HumanoidRootPart.Position
-        local playerPosition = LocalPlayer.Character.HumanoidRootPart.Position
         
-        -- Smoothly rotate camera towards target
-        Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPosition)
+        game:GetService("RunService").RenderStepped:Connect(updateLabel)
     end
 end
 
--- Detect right-click hold and release
-UserInputService.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton2 then -- Right Click
-        AimLockEnabled = true
-        Target = getNearestPlayer()
-    end
-end)
+-- Apply highlight to all existing players
+for _, player in pairs(game.Players:GetPlayers()) do
+    applyHighlight(player)
+end
 
-UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton2 then -- Right Click release
-        AimLockEnabled = false
-        Target = nil
-    end
-end)
-
--- Update aim lock while enabled
-RunService.RenderStepped:Connect(function()
-    if AimLockEnabled then
-        aimLock()
-    end
+-- Apply highlight to new players when they join
+game.Players.PlayerAdded:Connect(function(player)
+    player.CharacterAdded:Connect(function()
+        applyHighlight(player)
+    end)
 end)
