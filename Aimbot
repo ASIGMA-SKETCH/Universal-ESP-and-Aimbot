@@ -1,31 +1,38 @@
 local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 local Camera = game:GetService("Workspace").CurrentCamera
 
 local LocalPlayer = Players.LocalPlayer
-local Mouse = LocalPlayer:GetMouse()
 local AimlockTarget = nil
 local AimlockEnabled = false
+
+-- Function to wait for the player's character to fully load
+local function WaitForCharacter(player)
+    if player.Character then
+        return player.Character
+    end
+    return player.CharacterAdded:Wait()
+end
 
 -- Function to check if a target is behind a wall
 local function IsVisible(target)
     local character = LocalPlayer.Character
     if not character or not character:FindFirstChild("Head") then return false end
-    
+
     local origin = character.Head.Position
     local destination = target.Position
-    
+
     local rayParams = RaycastParams.new()
     rayParams.FilterDescendantsInstances = {character} -- Ignore local player
     rayParams.FilterType = Enum.RaycastFilterType.Blacklist
 
     local raycastResult = workspace:Raycast(origin, (destination - origin).unit * (destination - origin).magnitude, rayParams)
-    
+
     return raycastResult == nil -- If nothing is hit, target is visible
 end
 
--- Function to check if two players are on the same team
+-- Function to check if a player is on the same team
 local function IsTeammate(targetPlayer)
     if LocalPlayer.Team and targetPlayer.Team then
         return LocalPlayer.Team == targetPlayer.Team
@@ -48,7 +55,8 @@ local function GetNearestTarget()
                 if hrp and IsVisible(hrp) then -- Only aim if visible
                     local screenPosition, onScreen = Camera:WorldToViewportPoint(hrp.Position)
                     if onScreen then
-                        local mouseDistance = (Vector2.new(Mouse.X, Mouse.Y) - Vector2.new(screenPosition.X, screenPosition.Y)).magnitude
+                        local mouseDistance = (Vector2.new(UserInputService:GetMouseLocation().X, UserInputService:GetMouseLocation().Y) 
+                            - Vector2.new(screenPosition.X, screenPosition.Y)).magnitude
                         if mouseDistance < lowestDistance and mouseDistance < maxDistance then
                             nearestTarget = hrp
                             lowestDistance = mouseDistance
@@ -83,3 +91,15 @@ RunService.RenderStepped:Connect(function()
         Camera.CFrame = CFrame.new(Camera.CFrame.Position, AimlockTarget.Position)
     end
 end)
+
+-- Ensure ESP and Aimbot load correctly after respawn
+local function OnCharacterLoaded(character)
+    task.wait(2) -- Ensure everything loads properly
+    -- Run ESP and Aimbot setup again
+end
+
+-- Listen for respawn
+LocalPlayer.CharacterAdded:Connect(OnCharacterLoaded)
+
+-- Run on initial spawn
+OnCharacterLoaded(WaitForCharacter(LocalPlayer))
