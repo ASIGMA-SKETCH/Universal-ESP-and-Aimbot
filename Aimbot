@@ -15,23 +15,6 @@ local function WaitForCharacter(player)
     return player.CharacterAdded:Wait()
 end
 
--- Function to check if a target is behind a wall
-local function IsVisible(target)
-    local character = LocalPlayer.Character
-    if not character or not character:FindFirstChild("Head") then return false end
-
-    local origin = character.Head.Position
-    local destination = target.Position
-
-    local rayParams = RaycastParams.new()
-    rayParams.FilterDescendantsInstances = {character} -- Ignore local player
-    rayParams.FilterType = Enum.RaycastFilterType.Blacklist
-
-    local raycastResult = workspace:Raycast(origin, (destination - origin).unit * (destination - origin).magnitude, rayParams)
-
-    return raycastResult == nil -- If nothing is hit, target is visible
-end
-
 -- Function to check if a player is on the same team
 local function IsTeammate(targetPlayer)
     if LocalPlayer.Team and targetPlayer.Team then
