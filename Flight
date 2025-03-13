@@ -5,13 +5,36 @@ local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
+local Humanoid = Character:WaitForChild("Humanoid")
 
 local Flying = false
-local Speed = 50 -- Flight speed
+local Speed = 60 -- Flight speed
 local BodyVelocity
 local BodyGyro
 
 local Keys = { W = false, A = false, S = false, D = false, Space = false, LeftControl = false }
+
+-- Function to enable NoClip
+local function EnableNoClip()
+    RunService.Stepped:Connect(function()
+        if Flying then
+            for _, part in pairs(Character:GetChildren()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = false
+                end
+            end
+        end
+    end)
+end
+
+-- Function to disable NoClip
+local function DisableNoClip()
+    for _, part in pairs(Character:GetChildren()) do
+        if part:IsA("BasePart") then
+            part.CanCollide = true
+        end
+    end
+end
 
 -- Function to start flying
 local function StartFlying()
@@ -31,6 +54,9 @@ local function StartFlying()
     BodyGyro.P = 9e4
     BodyGyro.Parent = HumanoidRootPart
 
+    -- Enable NoClip
+    EnableNoClip()
+
     -- Flight movement loop
     RunService.RenderStepped:Connect(function()
         if not Flying then return end
@@ -38,7 +64,7 @@ local function StartFlying()
         local moveDirection = Vector3.new(
             (Keys.D and 1 or 0) - (Keys.A and 1 or 0),  -- Left & Right
             (Keys.Space and 1 or 0) - (Keys.LeftControl and 1 or 0), -- Up & Down
-            (Keys.S and -1 or 0) + (Keys.W and 1 or 0)  -- Forward & Backward (FIXED)
+            (Keys.S and -1 or 0) + (Keys.W and 1 or 0)  -- Forward & Backward (Fixed)
         )
 
         -- Move in camera direction
@@ -54,6 +80,9 @@ local function StopFlying()
     Flying = false
     if BodyVelocity then BodyVelocity:Destroy() end
     if BodyGyro then BodyGyro:Destroy() end
+    
+    -- Disable NoClip (Restore collision)
+    DisableNoClip()
 end
 
 -- Toggle flying when pressing "F"
