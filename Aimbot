@@ -15,6 +15,23 @@ local function WaitForCharacter(player)
     return player.CharacterAdded:Wait()
 end
 
+-- Function to check if a target is behind a wall
+local function IsVisible(target)
+    local character = LocalPlayer.Character
+    if not character or not character:FindFirstChild("Head") then return false end
+
+    local origin = character.Head.Position
+    local direction = (target.Position - origin).unit * (target.Position - origin).magnitude
+
+    local rayParams = RaycastParams.new()
+    rayParams.FilterDescendantsInstances = {character}
+    rayParams.FilterType = Enum.RaycastFilterType.Blacklist
+
+    local result = workspace:Raycast(origin, direction, rayParams)
+
+    return result == nil or result.Instance:IsDescendantOf(target.Parent) -- Corrected visibility check
+end
+
 -- Function to check if a player is on the same team
 local function IsTeammate(targetPlayer)
     if LocalPlayer.Team and targetPlayer.Team then
@@ -23,9 +40,9 @@ local function IsTeammate(targetPlayer)
     return false
 end
 
--- Function to find the nearest visible target
+-- Function to find the nearest visible target (360° detection)
 local function GetNearestTarget()
-    local maxDistance = 200 -- Max aimlock range
+    local maxDistance = 200
     local nearestTarget = nil
     local lowestDistance = math.huge
 
@@ -35,15 +52,12 @@ local function GetNearestTarget()
                 local char = player.Character
                 local hrp = char:FindFirstChild("HumanoidRootPart")
 
-                if hrp and IsVisible(hrp) then -- Only aim if visible
-                    local screenPosition, onScreen = Camera:WorldToViewportPoint(hrp.Position)
-                    if onScreen then
-                        local mouseDistance = (Vector2.new(UserInputService:GetMouseLocation().X, UserInputService:GetMouseLocation().Y) 
-                            - Vector2.new(screenPosition.X, screenPosition.Y)).magnitude
-                        if mouseDistance < lowestDistance and mouseDistance < maxDistance then
-                            nearestTarget = hrp
-                            lowestDistance = mouseDistance
-                        end
+                if hrp and IsVisible(hrp) then
+                    -- 360° detection, check all players around the local player
+                    local distance = (LocalPlayer.Character.HumanoidRootPart.Position - hrp.Position).Magnitude
+                    if distance < lowestDistance and distance < maxDistance then
+                        nearestTarget = hrp
+                        lowestDistance = distance
                     end
                 end
             end
@@ -52,42 +66,43 @@ local function GetNearestTarget()
     return nearestTarget
 end
 
--- Toggles aimlock on right-click
+-- Toggle aimlock on right-click
 UserInputService.InputBegan:Connect(function(input, processed)
-    if processed then return end
-    if input.UserInputType == Enum.UserInputType.MouseButton2 then
+    if input.UserInputType == Enum.UserInputType.MouseButton2 and not processed then
         AimlockEnabled = true
         AimlockTarget = GetNearestTarget()
     end
 end)
 
-UserInputService.InputEnded:Connect(function(input, processed)
+UserInputService.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton2 then
         AimlockEnabled = false
         AimlockTarget = nil
     end
 end)
 
--- Updates aimlock every frame
+-- Smooth aimlock updates
 RunService.RenderStepped:Connect(function()
     if AimlockEnabled and AimlockTarget then
-        -- First-person fix: Set the camera's CFrame instead of just turning it
         local head = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Head")
         if head then
-            Camera.CFrame = CFrame.new(Camera.CFrame.Position, AimlockTarget.Position)
-            LocalPlayer.Character:SetPrimaryPartCFrame(CFrame.new(head.Position, AimlockTarget.Position)) -- Aligns body
+            local targetPosition = AimlockTarget.Position
+
+            -- Smooth Camera Movement
+            Camera.CFrame = Camera.CFrame:Lerp(CFrame.new(Camera.CFrame.Position, targetPosition), 0.15)
+
+            -- Smooth Body Movement
+            LocalPlayer.Character:SetPrimaryPartCFrame(
+                LocalPlayer.Character:GetPrimaryPartCFrame():Lerp(CFrame.new(head.Position, targetPosition), 0.15)
+            )
         end
     end
 end)
 
 -- Ensure Aimbot loads correctly after respawn
-local function OnCharacterLoaded(character)
+LocalPlayer.CharacterAdded:Connect(function(character)
     task.wait(2) -- Ensure everything loads properly
-    -- Run Aimbot setup again
-end
-
--- Listen for respawn
-LocalPlayer.CharacterAdded:Connect(OnCharacterLoaded)
+end)
 
 -- Run on initial spawn
-OnCharacterLoaded(WaitForCharacter(LocalPlayer))
+WaitForCharacter(LocalPlayer)
