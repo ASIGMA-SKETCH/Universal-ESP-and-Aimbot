@@ -8,7 +8,6 @@ local ESPObjects = {}
 
 -- Function to create ESP for a player
 local function CreateESP(player)
-    if player == LocalPlayer or IsTeammate(player) then return end
 
     local character = player.Character or player.CharacterAdded:Wait()
     local hrp = character:WaitForChild("HumanoidRootPart")
