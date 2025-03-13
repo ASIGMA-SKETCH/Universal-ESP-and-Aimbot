@@ -8,6 +8,23 @@ local Mouse = LocalPlayer:GetMouse()
 local AimlockTarget = nil
 local AimlockEnabled = false
 
+-- Function to check if a target is behind a wall
+local function IsVisible(target)
+    local character = LocalPlayer.Character
+    if not character or not character:FindFirstChild("Head") then return false end
+    
+    local origin = character.Head.Position
+    local destination = target.Position
+    
+    local rayParams = RaycastParams.new()
+    rayParams.FilterDescendantsInstances = {character} -- Ignore local player
+    rayParams.FilterType = Enum.RaycastFilterType.Blacklist
+
+    local raycastResult = workspace:Raycast(origin, (destination - origin).unit * (destination - origin).magnitude, rayParams)
+    
+    return raycastResult == nil -- If nothing is hit, target is visible
+end
+
 -- Function to check if two players are on the same team
 local function IsTeammate(targetPlayer)
     if LocalPlayer.Team and targetPlayer.Team then
@@ -16,7 +33,7 @@ local function IsTeammate(targetPlayer)
     return false
 end
 
--- Function to find the nearest target
+-- Function to find the nearest visible target
 local function GetNearestTarget()
     local maxDistance = 200 -- Max aimlock range
     local nearestTarget = nil
@@ -28,7 +45,7 @@ local function GetNearestTarget()
                 local char = player.Character
                 local hrp = char:FindFirstChild("HumanoidRootPart")
 
-                if hrp then
+                if hrp and IsVisible(hrp) then -- Only aim if visible
                     local screenPosition, onScreen = Camera:WorldToViewportPoint(hrp.Position)
                     if onScreen then
                         local mouseDistance = (Vector2.new(Mouse.X, Mouse.Y) - Vector2.new(screenPosition.X, screenPosition.Y)).magnitude
