@@ -38,9 +38,16 @@ local function CreateESP(player)
     nameLabel.Font = Enum.Font.SourceSansBold
     nameLabel.Parent = billboard
 
+    -- Highlight effect
+    local highlight = Instance.new("Highlight")
+    highlight.FillColor = Color3.fromRGB(255, 100, 50) -- Reddish Orange
+    highlight.FillTransparency = 0.5
+    highlight.OutlineTransparency = 0.2
+    highlight.Parent = character
+
     -- Store ESP object
     billboard.Parent = game.CoreGui
-    ESPObjects[player] = billboard
+    ESPObjects[player] = { Billboard = billboard, Highlight = highlight }
 
     -- Update ESP every frame
     RunService.RenderStepped:Connect(function()
@@ -55,7 +62,12 @@ end
 -- Function to remove ESP when player leaves
 local function RemoveESP(player)
     if ESPObjects[player] then
-        ESPObjects[player]:Destroy()
+        if ESPObjects[player].Billboard then
+            ESPObjects[player].Billboard:Destroy()
+        end
+        if ESPObjects[player].Highlight then
+            ESPObjects[player].Highlight:Destroy()
+        end
         ESPObjects[player] = nil
     end
 end
