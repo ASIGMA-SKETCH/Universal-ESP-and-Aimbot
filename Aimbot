@@ -7,7 +7,7 @@ local LocalPlayer = Players.LocalPlayer
 local AimlockTarget = nil
 local AimlockEnabled = false
 
--- Function to wait for the player's character to fully load
+-- Function to wait for character to fully load
 local function WaitForCharacter(player)
     if player.Character then
         return player.Character
@@ -88,14 +88,19 @@ end)
 -- Updates aimlock every frame
 RunService.RenderStepped:Connect(function()
     if AimlockEnabled and AimlockTarget then
-        Camera.CFrame = CFrame.new(Camera.CFrame.Position, AimlockTarget.Position)
+        -- First-person fix: Set the camera's CFrame instead of just turning it
+        local head = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Head")
+        if head then
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, AimlockTarget.Position)
+            LocalPlayer.Character:SetPrimaryPartCFrame(CFrame.new(head.Position, AimlockTarget.Position)) -- Aligns body
+        end
     end
 end)
 
--- Ensure ESP and Aimbot load correctly after respawn
+-- Ensure Aimbot loads correctly after respawn
 local function OnCharacterLoaded(character)
     task.wait(2) -- Ensure everything loads properly
-    -- Run ESP and Aimbot setup again
+    -- Run Aimbot setup again
 end
 
 -- Listen for respawn
