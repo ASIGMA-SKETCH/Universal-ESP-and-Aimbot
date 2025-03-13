@@ -1,0 +1,86 @@
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+
+local LocalPlayer = Players.LocalPlayer
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
+
+local Flying = false
+local Speed = 50 -- Flight speed
+local BodyVelocity
+local BodyGyro
+
+local Keys = { W = false, A = false, S = false, D = false, Space = false, LeftControl = false }
+
+-- Function to start flying
+local function StartFlying()
+    if Flying then return end
+    Flying = true
+
+    -- Prevents gravity from pulling player down
+    BodyVelocity = Instance.new("BodyVelocity")
+    BodyVelocity.Velocity = Vector3.new(0, 0, 0)
+    BodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+    BodyVelocity.Parent = HumanoidRootPart
+
+    -- Keeps character upright
+    BodyGyro = Instance.new("BodyGyro")
+    BodyGyro.CFrame = HumanoidRootPart.CFrame
+    BodyGyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+    BodyGyro.P = 9e4
+    BodyGyro.Parent = HumanoidRootPart
+
+    -- Flight movement loop
+    RunService.RenderStepped:Connect(function()
+        if not Flying then return end
+
+        local moveDirection = Vector3.new(
+            (Keys.D and 1 or 0) - (Keys.A and 1 or 0),  -- Left & Right
+            (Keys.Space and 1 or 0) - (Keys.LeftControl and 1 or 0), -- Up & Down
+            (Keys.S and -1 or 0) + (Keys.W and 1 or 0)  -- Forward & Backward (FIXED)
+        )
+
+        -- Move in camera direction
+        local cameraCF = workspace.CurrentCamera.CFrame
+        local moveVector = (cameraCF.RightVector * moveDirection.X) + (Vector3.new(0, 1, 0) * moveDirection.Y) + (cameraCF.LookVector * moveDirection.Z)
+
+        BodyVelocity.Velocity = moveVector * Speed
+    end)
+end
+
+-- Function to stop flying
+local function StopFlying()
+    Flying = false
+    if BodyVelocity then BodyVelocity:Destroy() end
+    if BodyGyro then BodyGyro:Destroy() end
+end
+
+-- Toggle flying when pressing "F"
+UserInputService.InputBegan:Connect(function(input, processed)
+    if processed then return end
+    if input.KeyCode == Enum.KeyCode.F then
+        if Flying then
+            StopFlying()
+        else
+            StartFlying()
+        end
+    elseif input.KeyCode == Enum.KeyCode.W then Keys.W = true
+    elseif input.KeyCode == Enum.KeyCode.A then Keys.A = true
+    elseif input.KeyCode == Enum.KeyCode.S then Keys.S = true
+    elseif input.KeyCode == Enum.KeyCode.D then Keys.D = true
+    elseif input.KeyCode == Enum.KeyCode.Space then Keys.Space = true
+    elseif input.KeyCode == Enum.KeyCode.LeftControl then Keys.LeftControl = true
+    end
+end)
+
+-- Stop movement on key release
+UserInputService.InputEnded:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.W then Keys.W = false
+    elseif input.KeyCode == Enum.KeyCode.A then Keys.A = false
+    elseif input.KeyCode == Enum.KeyCode.S then Keys.S = false
+    elseif input.KeyCode == Enum.KeyCode.D then Keys.D = false
+    elseif input.KeyCode == Enum.KeyCode.Space then Keys.Space = false
+    elseif input.KeyCode == Enum.KeyCode.LeftControl then Keys.LeftControl = false
+    end
+end)
