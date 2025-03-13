@@ -1,8 +1,11 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local LocalPlayer = Players.LocalPlayer
+local Camera = game:GetService("Workspace").CurrentCamera
 
--- Function to check if two players are on the same team
+local LocalPlayer = Players.LocalPlayer
+local ESPObjects = {}
+
+-- Function to check if a player is on the same team
 local function IsTeammate(targetPlayer)
     if LocalPlayer.Team and targetPlayer.Team then
         return LocalPlayer.Team == targetPlayer.Team
@@ -10,35 +13,72 @@ local function IsTeammate(targetPlayer)
     return false
 end
 
--- Function to add ESP to a player
-local function AddESP(player)
-    -- Don't highlight yourself or teammates
+-- Function to create ESP for a player
+local function CreateESP(player)
     if player == LocalPlayer or IsTeammate(player) then return end
 
-    -- Wait for character to load
-    player.CharacterAdded:Connect(function(character)
-        local highlight = Instance.new("Highlight")
-        highlight.Parent = character
-        highlight.FillColor = Color3.fromRGB(255, 100, 0) -- Reddish-orange
-        highlight.FillTransparency = 0.5 -- Semi-transparent
-        highlight.OutlineColor = Color3.fromRGB(255, 50, 0) -- Darker outline
-        highlight.OutlineTransparency = 0.2
-    end)
+    local character = player.Character or player.CharacterAdded:Wait()
+    local hrp = character:WaitForChild("HumanoidRootPart")
 
-    -- If they already have a character, apply ESP immediately
-    if player.Character then
-        local highlight = Instance.new("Highlight")
-        highlight.Parent = player.Character
-        highlight.FillColor = Color3.fromRGB(255, 100, 0)
-        highlight.FillTransparency = 0.5
-        highlight.OutlineColor = Color3.fromRGB(255, 50, 0)
-        highlight.OutlineTransparency = 0.2
+    -- BillboardGui for ESP
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "ESP"
+    billboard.Adornee = hrp
+    billboard.Size = UDim2.new(0, 200, 0, 50)
+    billboard.StudsOffset = Vector3.new(0, 2, 0)
+    billboard.AlwaysOnTop = true
+
+    -- ESP Label
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Size = UDim2.new(1, 0, 1, 0)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.TextColor3 = Color3.fromRGB(255, 100, 50) -- Reddish Orange
+    nameLabel.TextStrokeTransparency = 0.5
+    nameLabel.TextScaled = true
+    nameLabel.Font = Enum.Font.SourceSansBold
+    nameLabel.Parent = billboard
+
+    -- Store ESP object
+    billboard.Parent = game.CoreGui
+    ESPObjects[player] = billboard
+
+    -- Update ESP every frame
+    RunService.RenderStepped:Connect(function()
+        if character and hrp and nameLabel and billboard then
+            local distance = (Camera.CFrame.Position - hrp.Position).Magnitude
+            nameLabel.Text = player.Name .. " [" .. math.floor(distance) .. "m]"
+            billboard.Enabled = true -- Always visible
+        end
+    end)
+end
+
+-- Function to remove ESP when player leaves
+local function RemoveESP(player)
+    if ESPObjects[player] then
+        ESPObjects[player]:Destroy()
+        ESPObjects[player] = nil
     end
 end
 
--- Apply ESP to all current and future players
-for _, player in pairs(Players:GetPlayers()) do
-    AddESP(player)
+-- Apply ESP to all players
+local function ApplyESP()
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            CreateESP(player)
+        end
+    end
 end
 
-Players.PlayerAdded:Connect(AddESP)
+-- Listen for new players joining
+Players.PlayerAdded:Connect(function(player)
+    player.CharacterAdded:Connect(function()
+        task.wait(2) -- Ensure everything loads
+        CreateESP(player)
+    end)
+end)
+
+-- Listen for players leaving
+Players.PlayerRemoving:Connect(RemoveESP)
+
+-- Apply ESP initially
+ApplyESP()
